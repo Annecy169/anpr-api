@@ -1,39 +1,61 @@
 import scrapy
 from scrapy.crawler import CrawlerProcess
+from scrapy.http import Request
 
-countryFuelPrices = {"fuelPrices": []}
+carDetails = {"car_details": []}
 
-class MySpider(scrapy.Spider):
-    name = 'Petrol Prices'
-    allowed_domains = ['cargopedia.net']
+def authentication_failed(response):
+    # TODO: Check the contents of the response and return True if it failed
+    # or False if it succeeded.
+    print(response)
+    pass
+
+class LoginSpider(scrapy.Spider):
+    name = 'anpr'
+
     start_urls = [
-        'https://www.cargopedia.net/europe-fuel-prices',
+        'https://totalcarcheck.co.uk/Account/Login',
     ]
-
+    
     def parse(self, response):
-        for td in response.xpath('//tr').getall():
-            removeSlash = td.replace("\t", "").replace("\n","")
-            removedImage = removeSlash.split("\xa0")
+        return scrapy.FormRequest.from_response(
+            response,
+            formdata={'UserName': '---', 'Password': '---'},
+            callback=self.after_login
+        )
 
-            try :
-                namePrice = removedImage[1]
-                infoArray = namePrice.split("</td><td>")
-                country = infoArray[0].replace(" ","",1)
-                petrol = infoArray[1]
-                diesel = infoArray[2]
-                countryFuelPrices['fuelPrices'].append({
-                    "country": country,
-                    "petrol": petrol,
-                    "diesel": diesel
+    def after_login(self, response):
+        if authentication_failed(response):
+            self.logger.error("Login failed")
+            return
+
+        url = 'https://totalcarcheck.co.uk/FreeCheck?regno=F-----L'
+        yield Request(url, callback=self.parse_check_np)
+    
+    def parse_check_np(self, response):
+
+        # Check MOT
+        for tr in response.xpath('//tr').getall():
+            if 'certLabel' in tr and 'MOT Status' in tr:
+                motCheck = tr.split("<span")[1].split("</span>")[0].split('>')[1]
+                motValid = 'false'
+
+                if 'Expires:' in motCheck or 'First MOT due' in motCheck:
+                    motValid = 'true'
+
+                carDetails['car_details'].append({
+                    "MOT": [{
+                        "valid": motValid,
+                        "details": motCheck
+                    }]
                 })
-            except :
-                savedVar = "failed"
+        
+        print(carDetails)
 
-
-def handelProcess():
+def handleProcess():
     process = CrawlerProcess()
-    d = process.crawl(MySpider)
+    d = process.crawl(LoginSpider)
     process.start()
 
 def getFuelPrices():
-    return countryFuelPrices
+    return carDetails

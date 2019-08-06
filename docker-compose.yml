@@ -2,8 +2,8 @@ version: '3.7'
 
 services:
 
-  pythonApp:
-    container_name: FuelPythonAPP
+  WebCrawler:
+    container_name: anprAPI
     build:
       context: .
       dockerfile: dockerfile
