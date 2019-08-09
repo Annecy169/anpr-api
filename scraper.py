@@ -3,6 +3,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.http import Request
 
 carDetails = {"car_details": []}
+spiderFinished  = []
 
 def authentication_failed(response):
     # TODO: Check the contents of the response and return True if it failed
@@ -20,7 +21,7 @@ class LoginSpider(scrapy.Spider):
     def parse(self, response):
         return scrapy.FormRequest.from_response(
             response,
-            formdata={'UserName': '---', 'Password': '---'},
+            formdata={'UserName': '-', 'Password': '-'},
             callback=self.after_login
         )
 
@@ -33,7 +34,6 @@ class LoginSpider(scrapy.Spider):
         yield Request(url, callback=self.parse_check_np)
     
     def parse_check_np(self, response):
-
         # Check MOT
         for tr in response.xpath('//tr').getall():
             if 'certLabel' in tr and 'MOT Status' in tr:
@@ -49,13 +49,31 @@ class LoginSpider(scrapy.Spider):
                         "details": motCheck
                     }]
                 })
+            elif 'certLabel' in tr and 'Road Tax Status' in tr:
+                taxCheck = tr.split("<span")[1].split("</span>")[0].split('>')[1]
+                taxValid = 'false'
+
+                if 'Expires:' in taxCheck:
+                    taxValid = 'true'
+
+                carDetails['car_details'].append({
+                    "Tax": [{
+                        "valid": taxValid,
+                        "details": taxCheck
+                    }]
+                })
         
         print(carDetails)
+        spiderFinished.append = 'True'
 
-def handleProcess():
+def carDetailsANPR():
     process = CrawlerProcess()
     d = process.crawl(LoginSpider)
     process.start()
 
-def getFuelPrices():
+    itterations = 0
+    while str(spiderFinished).find('True') >= 0:
+        print('Spider Running')
+
+    print('Spider Finished')
     return carDetails

@@ -1,27 +1,37 @@
 import json
 from urllib.parse import parse_qs
+from threading import Thread
 from waitress import serve
 from pyramid.config import Configurator
 from pyramid.response import Response
 from scraper import *
 
-#handleProcess()
-
 def api_handler(request):
     print('Incoming request')
+    thr = Thread(target=carDetailsANPR, args=[])
+    thr.start()
 
-    print(request)
-    
-    return { 
-        "Error": 404,
-        "Required Content Type": "application/json",
-        "Description": "Please add the following parameters",
-        "Params": [
-            {
-                "reg": "numberplate"
-            }
-        ]
-    }
+    print(carDetails)
+    try:
+        requestQuery = str(request).split(' HTTP/1.1')[0].split('/?')[1]
+        numberplate = requestQuery.split('=')
+
+        return { 
+            "Received": 200,
+            "Description": "Number Plate Received",
+            numberplate[0]: numberplate[1]
+        }
+    except:
+        return { 
+            "Error": 404,
+            "Required Content Type": "application/json",
+            "Description": "Please add the following parameters",
+            "Params": [
+                {
+                    "reg": "numberplate"
+                }
+            ]
+        }
 
 
 if __name__ == '__main__':
